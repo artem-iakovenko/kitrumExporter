@@ -2,17 +2,20 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import csv
 import io
+from secret_manager import access_secret
+import json
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+sheets_secrets = json.loads(access_secret("kitrum-cloud", "google_sheets_service"))
 
 class GoogleSheet:
     def __init__(self, spreadsheet_id, sheet_range, view):
         self.spreadsheet_id = spreadsheet_id
         self.sheet_range = sheet_range
         self.view = view
-        self.creds = service_account.Credentials.from_service_account_file(
-            'credentials/sheets.json', scopes=SCOPES
+        self.creds = service_account.Credentials.from_service_account_info(
+            sheets_secrets, scopes=SCOPES
         )
         self.service = build('sheets', 'v4', credentials=self.creds)
 

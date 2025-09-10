@@ -1,7 +1,13 @@
 import os
+import time
+import json
 from google.cloud import bigquery
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'credentials/bq.json'
-client = bigquery.Client()
+from secret_manager import access_secret
+from google.oauth2 import service_account
+
+kitrum_bq_json = json.loads(access_secret("kitrum-cloud", "kitrum_bq"))
+credentials = service_account.Credentials.from_service_account_info(kitrum_bq_json)
+client = bigquery.Client(credentials=credentials, project=credentials.project_id)
 
 
 class BigQuery:
@@ -21,9 +27,18 @@ class BigQuery:
 
     def insert_data(self):
         formatted_data = [
-            {key.replace(" ", "_").lower(): value.replace(",", "") for key, value in item.items()}
+            {key.replace(" ", "_").lower().replace("/", "_"): value.replace(",", "") for key, value in item.items()}
             for item in self.view
         ]
+        skip_keys = ['start_date_on_project', 'hired_by', 'dev_start_period']
+
+        for item in formatted_data:
+            for skip_key in skip_keys:
+                try:
+                    del item[skip_key]
+                except:
+                    pass
+
         query = f"TRUNCATE TABLE `{self.table_id}`"
         query_job = client.query(query)
         query_job.result()
